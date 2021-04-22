@@ -1,0 +1,94 @@
+_schema-version: "3.2"
+ID: ns-myfioriapp
+description: SAP Fiori elements application for managing products
+version: 0.0.1
+modules:
+- name: ns-myfioriapp-dest-content
+  type: com.sap.application.content
+  requires:
+  - name: ns-myfioriapp-dest-srv
+    parameters:
+      content-target: true
+  - name: ns-myfioriapp-repo-host
+    parameters:
+      service-key:
+        name: ns-myfioriapp-repo-host-key
+  - name: ns-myfioriapp-uaa
+    parameters:
+      service-key:
+        name: ns-myfioriapp-uaa-key
+  parameters:
+    content:
+      instance:
+        destinations:
+        - Name: ns-myfioriapp_repo_host
+          ServiceInstanceName: ns-myfioriapp-html5-srv
+          ServiceKeyName: ns-myfioriapp-repo-host-key
+          sap.cloud.service: ns-myfioriapp
+        - Authentication: OAuth2UserTokenExchange
+          Name: ns-myfioriapp_uaa
+          ServiceInstanceName: ns-myfioriapp-xsuaa-srv
+          ServiceKeyName: ns-myfioriapp-uaa-key
+          sap.cloud.service: ns-myfioriapp
+        existing_destinations_policy: ignore
+  build-parameters:
+    no-source: true
+- name: ns-myfioriapp-app-content
+  type: com.sap.application.content
+  path: .
+  requires:
+  - name: ns-myfioriapp-repo-host
+    parameters:
+      content-target: true
+  build-parameters:
+    build-result: resources
+    requires:
+    - artifacts:
+      - nsmyfioriapp.zip
+      name: nsmyfioriapp
+      target-path: resources/
+- name: nsmyfioriapp
+  type: html5
+  path: .
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+resources:
+- name: ns-myfioriapp-dest-srv
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: true
+      init_data:
+        instance:
+          destinations:
+          - Authentication: NoAuthentication
+            Name: ui5
+            ProxyType: Internet
+            Type: HTTP
+            URL: https://ui5.sap.com
+          existing_destinations_policy: update
+      version: 1.0.0
+    service: destination
+    service-name: ns-myfioriapp-dest-srv
+    service-plan: lite
+- name: ns-myfioriapp-uaa
+  type: org.cloudfoundry.managed-service
+  parameters:
+    path: ./xs-security.json
+    service: xsuaa
+    service-name: ns-myfioriapp-xsuaa-srv
+    service-plan: application
+- name: ns-myfioriapp-repo-host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-name: ns-myfioriapp-html5-srv
+    service-plan: app-host
+parameters:
+  deploy_mode: html5-repo
+  enable-parallel-deployments: true
